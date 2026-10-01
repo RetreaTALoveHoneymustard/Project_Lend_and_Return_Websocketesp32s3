@@ -30,8 +30,15 @@ const DEVICE_TOKEN = process.env.DEVICE_TOKEN || "change-me-device-token";
 // How long the backend waits for a device to answer a command before
 // giving the HTTP caller a 504.
 const COMMAND_TIMEOUT_MS = Number(process.env.COMMAND_TIMEOUT_MS || 8000);
-// Comma-separated list of allowed browser origins, or "*" for any.
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
+
+// Allowed browser origins: comma-separated list, or "*" for any.
+// A browser's Origin header is scheme + host (+ port) only: no path and NO
+// trailing slash. So we clean up whatever was typed into the env var:
+//   " https://my-site.netlify.app/ "  ->  "https://my-site.netlify.app"
+const normalizeOrigin = (o) => o.trim().replace(/\/+$/, "");
+const RAW_ORIGINS = process.env.ALLOWED_ORIGIN || "*";
+const ALLOWED_ORIGINS = RAW_ORIGINS.split(",").map(normalizeOrigin).filter(Boolean);
+const ALLOW_ANY_ORIGIN = ALLOWED_ORIGINS.includes("*");
 
 // Secret the browser client must send in the x-api-key header for /api/*.
 // Generate one with:  openssl rand -hex 32
@@ -45,8 +52,29 @@ const pending = new Map();
 
 // ---- express app --------------------------------------------------------
 const app = express();
+
+// CORS must stay FIRST so that preflight (OPTIONS) requests are answered
+// before the API-key check, which a preflight can never satisfy.
+app.use(
+  cors({
+    origin(origin, callback) {
+      // No Origin header = not a browser (curl, health checks, server-to-server).
+      if (!origin) return callback(null, true);
+      if (ALLOW_ANY_ORIGIN || ALLOWED_ORIGINS.includes(normalizeOrigin(origin))) {
+        return callback(null, true);
+      }
+      console.warn(
+        `[cors] blocked origin "${origin}" (allowed: ${ALLOWED_ORIGINS.join(", ")})`
+      );
+      return callback(null, false); // no CORS headers -> browser blocks it
+    },
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "x-api-key"],
+    maxAge: 600, // let browsers cache the preflight for 10 minutes
+  })
+);
+
 app.use(express.json());
-app.use(cors({ origin: ALLOWED_ORIGIN === "*" ? true : ALLOWED_ORIGIN.split(",") }));
 
 // hash both sides so timingSafeEqual always compares equal-length buffers
 const sha256 = (v) => crypto.createHash("sha256").update(String(v)).digest();
@@ -115,6 +143,7 @@ wss.on("connection", (socket, req) => {
   const token = url.searchParams.get("token");
 
   if (!deviceId || token !== DEVICE_TOKEN) {
+    console.warn(`[ws] rejected connection (deviceId=${deviceId || "none"}): bad or missing token`);
     socket.close(4001, "unauthorized");
     return;
   }
@@ -160,4 +189,7 @@ if (!API_KEY) {
 
 server.listen(PORT, () => {
   console.log(`HTTP + WebSocket relay listening on :${PORT}`);
+  console.log(
+    `[cors] allowed origins: ${ALLOW_ANY_ORIGIN ? "* (any)" : ALLOWED_ORIGINS.join(", ")}`
+  );
 });
