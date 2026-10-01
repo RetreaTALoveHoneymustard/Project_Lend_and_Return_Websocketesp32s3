@@ -4,6 +4,11 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>PN532 console</title>
+
+<!-- =========================================================================
+  SECTION 1: CSS STYLES
+  Edit layout, colors, fonts, and panel dimensions here.
+========================================================================== -->
 <style>
   :root {
     --bg: #14110d;
@@ -123,23 +128,38 @@
 </head>
 <body>
 
+  <!-- =========================================================================
+    SECTION 2: HEADER
+    Edit titles and description text here.
+  ========================================================================== -->
   <p class="title">pn532 console</p>
   <p class="subtitle">sends commands over HTTP to the backend, which relays them to the ESP32-S3 over WebSocket</p>
 
+  <!-- =========================================================================
+    SECTION 3: CONNECTION CONFIGURATION
+    Edit connection settings, inputs, and device checking UI here.
+  ========================================================================== -->
   <fieldset>
     <legend>connection</legend>
     <label for="backendUrl">backend url</label>
-    <input id="backendUrl" value="https://your-backend-host.onrender.com" />
+    <input id="backendUrl" value="https://your-backend-host.onrender.com" placeholder="eg. https://my-app.onrender.com" />
+    
     <label for="deviceId">device id</label>
-    <input id="deviceId" value="esp32-01" />
+    <input id="deviceId" value="esp32-01" placeholder="eg. esp32-01" />
+    
     <label for="apiKey">api key</label>
-    <input id="apiKey" type="password" autocomplete="off" />
+    <input id="apiKey" type="password" autocomplete="off" placeholder="eg. secret_api_key_123" />
+    
     <div class="row">
       <button id="refreshBtn">check devices online</button>
     </div>
     <div class="status-line" id="statusLine">not checked yet</div>
   </fieldset>
 
+  <!-- =========================================================================
+    SECTION 4: HARDWARE & RFID COMMANDS
+    Edit tag types, trigger buttons, and password management inputs here.
+  ========================================================================== -->
   <fieldset>
     <legend>commands</legend>
 
@@ -150,6 +170,7 @@
       <option value="ntag216">ntag216</option>
     </select>
 
+    <!-- Basic Tag Actions -->
     <div class="group">
       <div class="row" style="margin-top:0">
         <button data-cmd="ping">ping</button>
@@ -159,30 +180,33 @@
       </div>
     </div>
 
+    <!-- Read JSON Section -->
     <div class="group">
       <label for="readPw">password (optional)</label>
-      <input id="readPw" type="password" autocomplete="off" />
+      <input id="readPw" type="password" autocomplete="off" placeholder="eg. 1234" />
       <div class="row">
         <button id="readJsonBtn">read json</button>
       </div>
     </div>
 
+    <!-- Set Password Section -->
     <div class="group">
       <div class="group-title">set a NEW password:</div>
       <label for="newPw">new password</label>
-      <input id="newPw" type="password" autocomplete="new-password" />
+      <input id="newPw" type="password" autocomplete="new-password" placeholder="eg. 1234" />
       <label class="check"><input type="checkbox" id="protectRead" />also protect reads</label>
       <div class="row">
         <button id="setPwBtn">set password</button>
       </div>
     </div>
 
+    <!-- Change Password Section -->
     <div class="group">
       <div class="group-title">change an EXISTING password:</div>
       <label for="oldPw2">old password</label>
-      <input id="oldPw2" type="password" autocomplete="off" />
+      <input id="oldPw2" type="password" autocomplete="off" placeholder="eg. 1234" />
       <label for="newPw2">new password</label>
-      <input id="newPw2" type="password" autocomplete="new-password" />
+      <input id="newPw2" type="password" autocomplete="new-password" placeholder="eg. 5678" />
       <div class="row">
         <button id="changePwBtn">change password</button>
       </div>
@@ -191,11 +215,19 @@
     <div class="status-line" id="busyLine"></div>
   </fieldset>
 
+  <!-- =========================================================================
+    SECTION 5: LOG CONSOLE
+    Displays real-time logs and backend responses.
+  ========================================================================== -->
   <fieldset>
     <legend>log</legend>
     <div class="log" id="log"><div class="empty">nothing sent yet</div></div>
   </fieldset>
 
+  <!-- =========================================================================
+    SECTION 6: WRITE JSON MODAL DIALOG
+    Edit item fields and payload metadata input form here.
+  ========================================================================== -->
   <dialog id="writeDlg">
     <div class="dlg-head">
       <span>write item to tag</span>
@@ -203,19 +235,22 @@
     </div>
     <div class="dlg-body">
       <label for="wItemId">item id</label>
-      <input id="wItemId" autocomplete="off" />
+      <input id="wItemId" autocomplete="off" placeholder="eg. ITEM-001" />
+      
       <label for="wName">name</label>
-      <input id="wName" autocomplete="off" />
+      <input id="wName" autocomplete="off" placeholder="eg. Office Laptop" />
+      
       <label for="wImage">image</label>
-      <input id="wImage" autocomplete="off" />
+      <input id="wImage" autocomplete="off" placeholder="eg. https://example.com/item.png" />
+      
       <label for="wVersion">version</label>
-      <input id="wVersion" type="number" min="1" step="1" value="1" />
+      <input id="wVersion" type="number" min="1" step="1" value="1" placeholder="eg. 1" />
 
       <div class="bytes" id="wBytes"></div>
 
       <div class="sep">
         <label for="wPassword">password (optional, only if tag is already protected)</label>
-        <input id="wPassword" type="password" autocomplete="off" />
+        <input id="wPassword" type="password" autocomplete="off" placeholder="eg. 1234" />
       </div>
 
       <div class="form-error" id="wError"></div>
@@ -226,6 +261,10 @@
     </div>
   </dialog>
 
+<!-- =========================================================================
+  SECTION 7: JAVASCRIPT LOGIC
+  Handles storage, HTTP API calls, tag payload calculations, and log rendering.
+========================================================================== -->
 <script>
   const $ = (id) => document.getElementById(id);
   const logEl = $("log");
