@@ -37,7 +37,7 @@
 
   label { display: block; color: var(--dim); font-size: 12px; margin: 8px 0 4px; }
   label:first-child { margin-top: 0; }
-  input {
+  input, select {
     width: 100%;
     background: var(--panel);
     border: 1px solid var(--line);
@@ -45,7 +45,9 @@
     padding: 7px 8px;
     font: inherit;
   }
-  input:focus { outline: 1px solid var(--amber); }
+  input:focus, select:focus, button:focus-visible { outline: 1px solid var(--amber); }
+  input[type="checkbox"] { width: auto; margin: 0 8px 0 0; accent-color: var(--amber); }
+  label.check { display: flex; align-items: center; margin-top: 12px; cursor: pointer; }
 
   .row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
   button {
@@ -58,10 +60,15 @@
   }
   button:hover { border-color: var(--amber); color: var(--amber); }
   button:disabled { opacity: 0.4; cursor: default; }
+  button:disabled:hover { border-color: var(--line); color: var(--text); }
 
   .status-line { color: var(--dim); font-size: 12px; margin-top: 10px; }
   .status-line .on { color: var(--ok); }
   .status-line .off { color: var(--err); }
+
+  .group { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .group-title { color: var(--text); font-size: 13px; margin-bottom: 6px; }
+  .hint { color: var(--dim); font-size: 11px; margin-top: 6px; }
 
   .log {
     border: 1px solid var(--line);
@@ -74,7 +81,44 @@
   .entry .meta { color: var(--dim); font-size: 11px; }
   .entry .ok { color: var(--ok); }
   .entry .err { color: var(--err); }
+  .entry .parsed { color: var(--amber); margin-top: 4px; }
   .empty { color: var(--dim); }
+
+  /* write-to-tag modal */
+  dialog {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--line);
+    padding: 0;
+    width: min(440px, calc(100vw - 32px));
+    font: inherit;
+  }
+  dialog::backdrop { background: rgba(10, 8, 5, 0.72); }
+  .dlg-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    color: var(--amber);
+    font-size: 13px;
+  }
+  .dlg-head .x {
+    border: none;
+    background: none;
+    color: var(--dim);
+    font-size: 20px;
+    line-height: 1;
+    padding: 0 4px;
+  }
+  .dlg-head .x:hover { color: var(--amber); }
+  .dlg-body { padding: 14px; }
+  .dlg-body .sep { margin-top: 18px; padding-top: 4px; border-top: 1px solid var(--line); }
+  .dlg-body .sep label:first-child { margin-top: 10px; }
+  .dlg-body .row { justify-content: flex-end; }
+  .bytes { color: var(--dim); font-size: 11px; margin-top: 10px; }
+  .bytes.over { color: var(--err); }
+  .form-error { color: var(--err); font-size: 12px; min-height: 16px; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -88,6 +132,8 @@
     <input id="backendUrl" value="https://your-backend-host.onrender.com" />
     <label for="deviceId">device id</label>
     <input id="deviceId" value="esp32-01" />
+    <label for="apiKey">api key</label>
+    <input id="apiKey" type="password" autocomplete="off" />
     <div class="row">
       <button id="refreshBtn">check devices online</button>
     </div>
@@ -96,11 +142,53 @@
 
   <fieldset>
     <legend>commands</legend>
-    <div class="row">
-      <button data-cmd="ping">ping</button>
-      <button data-cmd="get_firmware_version">get firmware version</button>
-      <button data-cmd="read_tag">read tag</button>
+
+    <label for="tagType">tag type (used by every command below)</label>
+    <select id="tagType">
+      <option value="ntag213">ntag213</option>
+      <option value="ntag215" selected>ntag215</option>
+      <option value="ntag216">ntag216</option>
+    </select>
+
+    <div class="group">
+      <div class="row" style="margin-top:0">
+        <button data-cmd="ping">ping</button>
+        <button data-cmd="get_firmware_version">get firmware version</button>
+        <button data-cmd="read_tag">read tag</button>
+        <button id="openWriteBtn">write json…</button>
+      </div>
     </div>
+
+    <div class="group">
+      <label for="readPw">password (optional)</label>
+      <input id="readPw" type="password" autocomplete="off" />
+      <div class="row">
+        <button id="readJsonBtn">read json</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">set a NEW password:</div>
+      <label for="newPw">new password</label>
+      <input id="newPw" type="password" autocomplete="new-password" />
+      <label class="check"><input type="checkbox" id="protectRead" />also protect reads</label>
+      <div class="row">
+        <button id="setPwBtn">set password</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">change an EXISTING password:</div>
+      <label for="oldPw2">old password</label>
+      <input id="oldPw2" type="password" autocomplete="off" />
+      <label for="newPw2">new password</label>
+      <input id="newPw2" type="password" autocomplete="new-password" />
+      <div class="row">
+        <button id="changePwBtn">change password</button>
+      </div>
+    </div>
+
+    <div class="status-line" id="busyLine"></div>
   </fieldset>
 
   <fieldset>
@@ -108,69 +196,253 @@
     <div class="log" id="log"><div class="empty">nothing sent yet</div></div>
   </fieldset>
 
+  <dialog id="writeDlg">
+    <div class="dlg-head">
+      <span>write item to tag</span>
+      <button class="x" id="writeCloseBtn" aria-label="close">&times;</button>
+    </div>
+    <div class="dlg-body">
+      <label for="wItemId">item id</label>
+      <input id="wItemId" autocomplete="off" />
+      <label for="wName">name</label>
+      <input id="wName" autocomplete="off" />
+      <label for="wImage">image</label>
+      <input id="wImage" autocomplete="off" />
+      <label for="wVersion">version</label>
+      <input id="wVersion" type="number" min="1" step="1" value="1" />
+
+      <div class="bytes" id="wBytes"></div>
+
+      <div class="sep">
+        <label for="wPassword">password (optional, only if tag is already protected)</label>
+        <input id="wPassword" type="password" autocomplete="off" />
+      </div>
+
+      <div class="form-error" id="wError"></div>
+      <div class="hint">after you click write, hold the tag on the reader — it waits a few seconds.</div>
+      <div class="row">
+        <button id="writeGoBtn">write to tag</button>
+      </div>
+    </div>
+  </dialog>
+
 <script>
   const $ = (id) => document.getElementById(id);
   const logEl = $("log");
+  const SECRET_KEYS = ["password", "oldPassword", "newPassword"];
+  // raw user memory per tag type, in bytes (before NDEF overhead)
+  const TAG_BYTES = { ntag213: 144, ntag215: 504, ntag216: 888 };
 
-  function baseUrl() {
-    return $("backendUrl").value.trim().replace(/\/$/, "");
+  // ---- remember connection fields between visits ----------------------
+  function loadSaved() {
+    try {
+      for (const k of ["backendUrl", "deviceId", "apiKey"]) {
+        const v = localStorage.getItem("pn532." + k);
+        if (v) $(k).value = v;
+      }
+    } catch (_) { /* storage unavailable, ignore */ }
+  }
+  function saveField(k) {
+    try { localStorage.setItem("pn532." + k, $(k).value); } catch (_) {}
   }
 
-  function logEntry(html) {
-    if (logEl.querySelector(".empty")) logEl.innerHTML = "";
+  function baseUrl() { return $("backendUrl").value.trim().replace(/\/$/, ""); }
+  function apiHeaders(extra) {
+    return { "x-api-key": $("apiKey").value.trim(), ...extra };
+  }
+  function tagType() { return $("tagType").value; }
+  function timestamp() { return new Date().toLocaleTimeString(); }
+
+  // ---- log (built with textContent: tag contents are untrusted input) --
+  function logEntry(meta, body, cls, extra) {
+    if (logEl.querySelector(".empty")) logEl.textContent = "";
     const div = document.createElement("div");
     div.className = "entry";
-    div.innerHTML = html;
+    const m = document.createElement("div");
+    m.className = "meta";
+    m.textContent = meta;
+    const b = document.createElement("div");
+    b.className = cls;
+    b.textContent = body;
+    div.append(m, b);
+    if (extra) {
+      const e = document.createElement("div");
+      e.className = "parsed";
+      e.textContent = extra;
+      div.append(e);
+    }
     logEl.prepend(div);
   }
 
-  function timestamp() {
-    return new Date().toLocaleTimeString();
+  function clientError(command, message) {
+    logEntry(`${timestamp()} — ${command}`, message, "err");
   }
 
+  function maskSecrets(params) {
+    const copy = { ...params };
+    for (const k of SECRET_KEYS) if (copy[k]) copy[k] = "••••";
+    return copy;
+  }
+
+  function setBusy(on) {
+    document.querySelectorAll("button").forEach((b) => (b.disabled = on));
+    $("busyLine").textContent = on
+      ? "working… if the command needs a tag, hold it on the reader now"
+      : "";
+  }
+
+  // ---- backend calls ----------------------------------------------------
   async function checkDevices() {
-    $("statusLine").textContent = "checking…";
+    const line = $("statusLine");
+    line.textContent = "checking…";
     try {
-      const res = await fetch(`${baseUrl()}/api/devices`);
+      const res = await fetch(`${baseUrl()}/api/devices`, { headers: apiHeaders() });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       const list = data.devices || [];
       const wanted = $("deviceId").value.trim();
       const online = list.includes(wanted);
-      $("statusLine").innerHTML =
-        `online devices: [${list.join(", ") || "none"}] — target "${wanted}" is ` +
-        (online ? `<span class="on">online</span>` : `<span class="off">offline</span>`);
+      line.textContent = `online devices: [${list.join(", ") || "none"}] — target "${wanted}" is `;
+      const state = document.createElement("span");
+      state.className = online ? "on" : "off";
+      state.textContent = online ? "online" : "offline";
+      line.append(state);
     } catch (e) {
-      $("statusLine").innerHTML = `<span class="off">could not reach backend: ${e.message}</span>`;
+      line.textContent = "";
+      const state = document.createElement("span");
+      state.className = "off";
+      state.textContent = `could not reach backend: ${e.message}`;
+      line.append(state);
     }
   }
 
-  async function sendCommand(command) {
+  async function sendCommand(command, params) {
     const deviceId = $("deviceId").value.trim();
-    const startedAt = timestamp();
+    const hasParams = params && Object.keys(params).length > 0;
+    const meta =
+      `${timestamp()} — ${command} → ${deviceId}` +
+      (hasParams ? `\nparams: ${JSON.stringify(maskSecrets(params))}` : "");
+
+    setBusy(true);
     try {
       const res = await fetch(`${baseUrl()}/api/command`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deviceId, command }),
+        headers: apiHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ deviceId, command, params }),
       });
       const data = await res.json();
-      const cls = res.ok && data.status === "ok" ? "ok" : "err";
-      logEntry(
-        `<div class="meta">${startedAt} — ${command} → ${deviceId}</div>` +
-        `<div class="${cls}">${JSON.stringify(data)}</div>`
-      );
+      const ok = res.ok && data.status === "ok";
+
+      // read_json returns the tag's JSON as a string in `text`; show it readable too
+      let parsed = null;
+      if (ok && command === "read_json" && typeof data.text === "string") {
+        try {
+          parsed = "parsed:\n" + JSON.stringify(JSON.parse(data.text), null, 2);
+        } catch (_) {
+          parsed = "(tag text is not valid JSON)";
+        }
+      }
+      logEntry(meta, JSON.stringify(data), ok ? "ok" : "err", parsed);
     } catch (e) {
-      logEntry(
-        `<div class="meta">${startedAt} — ${command} → ${deviceId}</div>` +
-        `<div class="err">request failed: ${e.message}</div>`
-      );
+      logEntry(meta, `request failed: ${e.message}`, "err");
+    } finally {
+      setBusy(false);
     }
   }
 
+  // ---- write-to-tag modal -----------------------------------------------
+  const writeDlg = $("writeDlg");
+
+  function buildItem() {
+    const v = parseInt($("wVersion").value, 10);
+    return {
+      item_id: $("wItemId").value.trim(),
+      name: $("wName").value.trim(),
+      image: $("wImage").value.trim(),
+      v: Number.isFinite(v) ? v : 1,
+    };
+  }
+
+  function updateBytes() {
+    const size = new TextEncoder().encode(JSON.stringify(buildItem())).length;
+    const type = tagType();
+    const cap = TAG_BYTES[type];
+    const el = $("wBytes");
+    el.textContent = `payload: ${size} bytes — ${type} has ${cap} bytes of user memory, minus NDEF overhead`;
+    el.classList.toggle("over", size > cap);
+  }
+
+  function openWrite() {
+    $("wError").textContent = "";
+    updateBytes();
+    writeDlg.showModal();
+    $("wItemId").focus();
+  }
+
+  function submitWrite() {
+    const item = buildItem();
+    if (!item.item_id) {
+      $("wError").textContent = "item id is required";
+      $("wItemId").focus();
+      return;
+    }
+    const params = { json: JSON.stringify(item), tagType: tagType() };
+    const pw = $("wPassword").value;
+    if (pw) params.password = pw;
+
+    writeDlg.close();
+    $("wPassword").value = "";
+    sendCommand("write_json", params);
+  }
+
+  $("openWriteBtn").addEventListener("click", openWrite);
+  $("writeCloseBtn").addEventListener("click", () => writeDlg.close());
+  $("writeGoBtn").addEventListener("click", submitWrite);
+  writeDlg.addEventListener("click", (e) => { if (e.target === writeDlg) writeDlg.close(); });
+  writeDlg.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.tagName === "INPUT") submitWrite();
+  });
+  ["wItemId", "wName", "wImage", "wVersion"].forEach((id) =>
+    $(id).addEventListener("input", updateBytes)
+  );
+
+  // ---- main panel -----------------------------------------------------------
   $("refreshBtn").addEventListener("click", checkDevices);
+  $("backendUrl").addEventListener("input", () => saveField("backendUrl"));
+  $("deviceId").addEventListener("input", () => saveField("deviceId"));
+  $("apiKey").addEventListener("input", () => saveField("apiKey"));
+
   document.querySelectorAll("button[data-cmd]").forEach((btn) => {
     btn.addEventListener("click", () => sendCommand(btn.dataset.cmd));
   });
+
+  $("readJsonBtn").addEventListener("click", () => {
+    const params = { tagType: tagType() };
+    const pw = $("readPw").value;
+    if (pw) params.password = pw;
+    sendCommand("read_json", params);
+  });
+
+  $("setPwBtn").addEventListener("click", () => {
+    const password = $("newPw").value;
+    if (!password) return clientError("set_password", "enter a new password first");
+    sendCommand("set_password", {
+      password,
+      protectRead: $("protectRead").checked,
+      tagType: tagType(),
+    });
+  });
+
+  $("changePwBtn").addEventListener("click", () => {
+    const oldPassword = $("oldPw2").value;
+    const newPassword = $("newPw2").value;
+    if (!oldPassword || !newPassword) {
+      return clientError("change_password", "enter both the old and the new password");
+    }
+    sendCommand("change_password", { oldPassword, newPassword, tagType: tagType() });
+  });
+
+  loadSaved();
 </script>
 </body>
 </html>
