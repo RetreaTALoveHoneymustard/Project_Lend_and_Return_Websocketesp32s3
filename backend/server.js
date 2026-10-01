@@ -7,7 +7,10 @@
  *     GET  /api/devices          -> which devices are currently online
  *     POST /api/command          -> { deviceId, command, params } forwarded to the device,
  *                                    response streamed back as the HTTP reply
- *     GET  /health                -> uptime check
+ *     GET  /health                -> uptime check (open)
+ *
+ * /api/* requires the header  x-api-key: <API_KEY>  (set API_KEY as an env var).
+ * If API_KEY is not configured the /api routes refuse every request.
  *
  * Deploy as-is to Render / Railway / Fly.io (git-based deploy). They set
  * process.env.PORT for you; everything else is read from env vars below.
@@ -30,6 +33,10 @@ const COMMAND_TIMEOUT_MS = Number(process.env.COMMAND_TIMEOUT_MS || 8000);
 // Comma-separated list of allowed browser origins, or "*" for any.
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 
+// Secret the browser client must send in the x-api-key header for /api/*.
+// Generate one with:  openssl rand -hex 32
+const API_KEY = process.env.API_KEY || "";
+
 // ---- state --------------------------------------------------------------
 /** @type {Map<string, import('ws').WebSocket>} deviceId -> live socket */
 const devices = new Map();
@@ -41,9 +48,26 @@ const app = express();
 app.use(express.json());
 app.use(cors({ origin: ALLOWED_ORIGIN === "*" ? true : ALLOWED_ORIGIN.split(",") }));
 
+// hash both sides so timingSafeEqual always compares equal-length buffers
+const sha256 = (v) => crypto.createHash("sha256").update(String(v)).digest();
+
+function requireApiKey(req, res, next) {
+  if (!API_KEY) {
+    return res.status(500).json({ error: "server has no API_KEY configured" });
+  }
+  const supplied = req.get("x-api-key") || "";
+  if (!crypto.timingSafeEqual(sha256(supplied), sha256(API_KEY))) {
+    return res.status(401).json({ error: "missing or invalid API key" });
+  }
+  next();
+}
+
 app.get("/health", (_req, res) => {
   res.json({ ok: true, uptimeSeconds: process.uptime(), devicesOnline: devices.size });
 });
+
+// everything under /api needs the key; /health stays open for uptime checks
+app.use("/api", requireApiKey);
 
 app.get("/api/devices", (_req, res) => {
   res.json({ devices: [...devices.keys()] });
@@ -129,6 +153,10 @@ wss.on("connection", (socket, req) => {
 
   socket.on("error", (err) => console.error(`[ws] error from ${deviceId}:`, err.message));
 });
+
+if (!API_KEY) {
+  console.warn("[warn] API_KEY is not set — every /api request will be refused until you set it");
+}
 
 server.listen(PORT, () => {
   console.log(`HTTP + WebSocket relay listening on :${PORT}`);
