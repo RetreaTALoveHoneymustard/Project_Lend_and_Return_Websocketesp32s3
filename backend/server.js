@@ -113,24 +113,28 @@ app.post("/api/command", async (req, res) => {
     return res.status(404).json({ error: `device '${deviceId}' is not connected` });
   }
 
-  const requestId = crypto.randomUUID();
-  const payload = JSON.stringify({ requestId, command, params: params || {} });
+const requestId = crypto.randomUUID();
+const payload = JSON.stringify({ requestId, command, params: params || {} });
 
-  try {
-    const result = await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        pending.delete(requestId);
-        reject(new Error("device did not respond in time"));
-      }, COMMAND_TIMEOUT_MS);
+// wait as long as the device was told to wait for a tag, plus a margin
+const askedMs = Number(params && params.timeoutMs) || 0;
+const waitMs = Math.min(Math.max(COMMAND_TIMEOUT_MS, askedMs + 3000), 60000);
 
-      pending.set(requestId, { resolve, reject, timer });
-      socket.send(payload);
-    });
+try {
+  const result = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      pending.delete(requestId);
+      reject(new Error("device did not respond in time"));
+    }, waitMs);
 
-    res.json({ deviceId, ...result });
-  } catch (err) {
-    res.status(504).json({ error: err.message });
-  }
+    pending.set(requestId, { resolve, reject, timer });
+    socket.send(payload);
+  });
+
+  res.json({ deviceId, ...result });
+} catch (err) {
+  res.status(504).json({ error: err.message });
+}
 });
 
 // ---- http + websocket server --------------------------------------------
