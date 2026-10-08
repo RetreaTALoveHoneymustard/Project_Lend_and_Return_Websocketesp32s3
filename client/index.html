@@ -471,12 +471,12 @@
     sendCommand("read_json", params);
   });
 
-  $("setPwBtn").addEventListener("click", () => {
+ $("setPwBtn").addEventListener("click", () => {
   const password = $("newPw").value;
   if (password.length !== 4) return clientError("set_password", "password must be exactly 4 characters");
   sendCommand("set_password", {
     password,
-    protectRead: $("protectRead").checked,
+    protectRead: $("protectRead")?.checked || false,
     tagType: tagType(),
     timeoutMs: 10000,
     });
