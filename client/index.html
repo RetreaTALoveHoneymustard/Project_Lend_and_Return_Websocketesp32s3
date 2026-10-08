@@ -194,12 +194,21 @@
       <div class="group-title">set a NEW password:</div>
       <label for="newPw">new password</label>
       <input id="newPw" type="password" autocomplete="new-password" placeholder="eg. 1234" />
-      <label class="check"><input type="checkbox" id="protectRead" />also protect reads</label>
       <div class="row">
         <button id="setPwBtn">set password</button>
       </div>
     </div>
 
+    <!-- Remove Password Section -->
+    <div class="group">
+      <div class="group-title">remove password:</div>
+      <label for="removePw">current password</label>
+      <input id="removePw" type="password" maxlength="4" autocomplete="off" placeholder="eg. 1234" />
+      <div class="row">
+        <button id="removePwBtn">remove password</button>
+      </div>
+    </div>
+    
     <!-- Change Password Section -->
     <div class="group">
       <div class="group-title">change an EXISTING password:</div>
@@ -463,22 +472,39 @@
   });
 
   $("setPwBtn").addEventListener("click", () => {
-    const password = $("newPw").value;
-    if (!password) return clientError("set_password", "enter a new password first");
-    sendCommand("set_password", {
-      password,
-      protectRead: $("protectRead").checked,
-      tagType: tagType(),
+  const password = $("newPw").value;
+  if (password.length !== 4) return clientError("set_password", "password must be exactly 4 characters");
+  sendCommand("set_password", {
+    password,
+    protectRead: $("protectRead").checked,
+    tagType: tagType(),
+    timeoutMs: 10000,
     });
   });
 
-  $("changePwBtn").addEventListener("click", () => {
-    const oldPassword = $("oldPw2").value;
-    const newPassword = $("newPw2").value;
-    if (!oldPassword || !newPassword) {
-      return clientError("change_password", "enter both the old and the new password");
-    }
-    sendCommand("change_password", { oldPassword, newPassword, tagType: tagType() });
+  $("removePwBtn").addEventListener("click", () => {
+  const password = $("removePw").value;
+  if (password.length !== 4) return clientError("remove_password", "password must be exactly 4 characters");
+  sendCommand("remove_password", {
+    password,
+    tagType: tagType(),
+    timeoutMs: 10000,
+    });
+  });
+
+ $("changePwBtn").addEventListener("click", () => {
+  const oldPassword = $("oldPw2").value;
+  const newPassword = $("newPw2").value;
+  if (oldPassword.length !== 4 || newPassword.length !== 4) {
+    return clientError("change_password", "both passwords must be exactly 4 characters");
+  }
+  sendCommand("set_password", {
+    password: newPassword,
+    currentPassword: oldPassword,
+    protectRead: $("protectRead").checked,   // the firmware rewrites this setting every time
+    tagType: tagType(),
+    timeoutMs: 10000,
+    });
   });
 
   loadSaved();
