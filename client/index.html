@@ -108,7 +108,25 @@
     </div>
     <div class="status-line" id="busyLine"></div>
   </fieldset>
-
+  
+  <!-- database -->
+  <fieldset>
+    <legend>database (smart lending api)</legend>
+    <label for="lendUrl">lending api url</label>
+    <input id="lendUrl" value="https://rpi5.tailb8495f.ts.net" />
+  
+    <label for="lendPath">endpoint path</label>
+    <input id="lendPath" value="/loans" placeholder="eg. /loans" />
+  
+    <div class="row">
+      <button id="loadDbBtn">load data</button>
+    </div>
+    <div class="status-line" id="dbStatus"></div>
+    <div style="overflow-x:auto; margin-top:10px">
+      <table id="dbTable" style="width:100%; border-collapse:collapse"></table>
+    </div>
+  </fieldset>
+  
   <!-- log -->
   <fieldset>
     <legend>log</legend>
