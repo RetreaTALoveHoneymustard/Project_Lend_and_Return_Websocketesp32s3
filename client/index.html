@@ -145,7 +145,7 @@
     status.textContent = "loading…";
     table.textContent = "";
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { headers: apiHeaders() });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       let rows = await res.json();
       if (!Array.isArray(rows)) rows = rows.items || rows.data || [rows]; // handle wrapped responses
