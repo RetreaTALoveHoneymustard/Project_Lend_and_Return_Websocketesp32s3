@@ -136,7 +136,45 @@
 <script>
   const $ = (id) => document.getElementById(id);
   const logEl = $("log");
-
+  
+  async function loadDatabase() {
+    const status = $("dbStatus");
+    const table = $("dbTable");
+    const url = $("lendUrl").value.trim().replace(/\/$/, "") + $("lendPath").value.trim();
+  
+    status.textContent = "loading…";
+    table.textContent = "";
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      let rows = await res.json();
+      if (!Array.isArray(rows)) rows = rows.items || rows.data || [rows]; // handle wrapped responses
+      if (rows.length === 0) { status.textContent = "no rows"; return; }
+  
+      const cols = Object.keys(rows[0]);
+      const head = table.createTHead().insertRow();
+      cols.forEach((c) => {
+        const th = document.createElement("th");
+        th.textContent = c;
+        th.style.cssText = "text-align:left; color:var(--amber); border-bottom:1px solid var(--line); padding:6px";
+        head.append(th);
+      });
+      const body = table.createTBody();
+      rows.forEach((r) => {
+        const tr = body.insertRow();
+        cols.forEach((c) => {
+          const td = tr.insertCell();
+          td.textContent = r[c] ?? "";   // textContent, never innerHTML
+          td.style.cssText = "border-bottom:1px solid var(--line); padding:6px";
+        });
+      });
+      status.textContent = `${rows.length} rows loaded`;
+    } catch (e) {
+      status.textContent = `failed: ${e.message}`;
+    }
+  }
+  $("loadDbBtn").addEventListener("click", loadDatabase);
+  
   // ---- remember connection fields between visits ----
   function loadSaved() {
     try {
