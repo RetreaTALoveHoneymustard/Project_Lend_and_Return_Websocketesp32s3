@@ -101,6 +101,21 @@ app.get("/api/devices", (_req, res) => {
   res.json({ devices: [...devices.keys()] });
 });
 
+// ---- proxy to the Smart Lending API (read-only) ----
+const LENDING_API = process.env.LENDING_API || "https://rpi5.tailb8495f.ts.net";
+const ALLOWED = /^(loans|students|items|item-copies)(\/[A-Za-z0-9_-]+(\/items)?)?$/;
+
+app.get("/api/db/*", async (req, res) => {
+  const path = req.params[0];
+  if (!ALLOWED.test(path)) return res.status(404).json({ error: "path not allowed" });
+  try {
+    const r = await fetch(`${LENDING_API}/${path}`);
+    res.status(r.status).json(await r.json());
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
 app.post("/api/command", async (req, res) => {
   const { deviceId, command, params } = req.body || {};
 
