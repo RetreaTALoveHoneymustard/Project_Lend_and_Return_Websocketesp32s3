@@ -111,9 +111,11 @@ app.get("/api/db/*", async (req, res) => {
   try {
     const r = await fetch(`${LENDING_API}/${path}`);
     res.status(r.status).json(await r.json());
-  } catch (e) {
-    error: e.message,
-    cause: e.cause ? (e.cause.code || e.cause.message) : undefined,
+   } catch (e) {
+    res.status(502).json({
+      error: e.message,
+      cause: e.cause ? (e.cause.code || e.cause.message) : undefined,
+    });
   }
 });
 
