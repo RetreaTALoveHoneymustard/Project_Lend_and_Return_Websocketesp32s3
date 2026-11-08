@@ -21,6 +21,9 @@ const crypto = require("crypto");
 const express = require("express");
 const cors = require("cors");
 const { WebSocketServer } = require("ws");
+const path = require("path");
+const SITE_USER = process.env.SITE_USER || "admin";
+const SITE_PASSWORD = process.env.SITE_PASSWORD || "";
 
 // ---- config -----------------------------------------------------------
 const PORT = process.env.PORT || 3000;
@@ -79,7 +82,20 @@ app.use(express.json());
 // hash both sides so timingSafeEqual always compares equal-length buffers
 const sha256 = (v) => crypto.createHash("sha256").update(String(v)).digest();
 
+const safeEq = (a, b) => crypto.timingSafeEqual(sha256(a), sha256(b));
+
+function hasSiteLogin(req) {
+  if (!SITE_PASSWORD) return false;
+  const h = req.get("authorization") || "";
+  if (!h.startsWith("Basic ")) return false;
+  const decoded = Buffer.from(h.slice(6), "base64").toString();
+  const i = decoded.indexOf(":");
+  if (i < 0) return false;
+  return safeEq(decoded.slice(0, i), SITE_USER) && safeEq(decoded.slice(i + 1), SITE_PASSWORD);
+}
+
 function requireApiKey(req, res, next) {
+  if (hasSiteLogin(req)) return next();
   if (!API_KEY) {
     return res.status(500).json({ error: "server has no API_KEY configured" });
   }
@@ -94,6 +110,15 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true, uptimeSeconds: process.uptime(), devicesOnline: devices.size });
 });
 
+// the web page: browser shows a login box, then serves client/index.html
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api")) return next();
+  if (hasSiteLogin(req)) return next();
+  res.set("WWW-Authenticate", 'Basic realm="Lending console"');
+  res.status(401).send("Login required");
+});
+app.use(express.static(path.join(__dirname, "..", "client")));
+
 // everything under /api needs the key; /health stays open for uptime checks
 app.use("/api", requireApiKey);
 
@@ -106,12 +131,14 @@ const LENDING_API = process.env.LENDING_API || "https://rpi5.tailb8495f.ts.net";
 const ALLOWED = /^(loans|students|items|item-copies)(\/[A-Za-z0-9_-]+(\/items)?)?$/;
 
 app.get("/api/db/*", async (req, res) => {
-  const path = req.params[0];
-  if (!ALLOWED.test(path)) return res.status(404).json({ error: "path not allowed" });
+  const tablePath = req.params[0];
+  if (!ALLOWED.test(tablePath)) {
+    return res.status(404).json({ error: "path not allowed", received: String(tablePath) });
+  }
   try {
-    const r = await fetch(`${LENDING_API}/${path}`);
+    const r = await fetch(`${LENDING_API}/${tablePath}`);
     res.status(r.status).json(await r.json());
-   } catch (e) {
+  } catch (e) {
     res.status(502).json({
       error: e.message,
       cause: e.cause ? (e.cause.code || e.cause.message) : undefined,
