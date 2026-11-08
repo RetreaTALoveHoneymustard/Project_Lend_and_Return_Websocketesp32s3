@@ -3,276 +3,708 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Admin Console</title>
+<title>Smart Lending - Admin Console</title>
 
 <style>
   :root {
-    --bg: #14110d;
-    --panel: #1c1712;
-    --line: #3a3126;
-    --text: #e9dfc8;
-    --dim: #8f8368;
-    --amber: #e8a33d;
-    --ok: #7fb56a;
-    --err: #c9634a;
+    --bg: #fdf7f0;
+    --card: #ffffff;
+    --line: #f1e2d2;
+    --peach: #fde8d4;
+    --peach-soft: #fff3e6;
+    --accent: #b4530f;
+    --accent-deep: #8f3f08;
+    --ink: #3b2616;
+    --dim: #7d6b5d;
+    --ok: #3f7d4e;
+    --err: #b3392b;
   }
   * { box-sizing: border-box; }
-  html, body {
-    margin: 0;
+  html, body { margin: 0; }
+  body {
     background: var(--bg);
-    color: var(--text);
-    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, Menlo, monospace;
-    font-size: 14px;
+    color: var(--ink);
+    font: 17px/1.5 "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   }
-  body { padding: 24px; max-width: 720px; margin: 0 auto; }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  .title { font-size: 15px; color: var(--amber); margin: 0 0 2px; }
-  .subtitle { color: var(--dim); margin: 0 0 20px; font-size: 12px; }
+  /* ---------- page ---------- */
+  .page { max-width: 980px; margin: 0 auto; padding: 48px 28px 64px; }
+  .page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .crumb {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin: 0 0 10px;
+  }
+  h1 { font-size: 44px; line-height: 1.05; letter-spacing: -0.02em; margin: 0 0 10px; }
+  h2 { margin: 0; }
+  .lead { margin: 0; color: var(--dim); font-size: 19px; }
 
-  fieldset { border: 1px solid var(--line); padding: 14px; margin: 0 0 16px; }
-  legend { color: var(--dim); padding: 0 6px; font-size: 12px; }
+  .pill {
+    background: var(--peach);
+    color: var(--accent-deep);
+    font-weight: 700;
+    font-size: 15px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    display: inline-flex;
+    gap: 9px;
+    align-items: center;
+  }
+  .pill .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dim); }
+  .pill.ok .dot { background: var(--ok); }
+  .pill.bad .dot { background: var(--err); }
 
-  label { display: block; color: var(--dim); font-size: 12px; margin: 8px 0 4px; }
-  label:first-child { margin-top: 0; }
-  input {
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 26px; padding: 26px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
+  .tile {
+    display: block;
     width: 100%;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    color: var(--text);
-    padding: 7px 8px;
-    font: inherit;
+    text-align: left;
+    background: var(--bg);
+    border: 1.5px solid var(--line);
+    border-radius: 20px;
+    padding: 22px;
+    cursor: pointer;
+    min-width: 0;
   }
-  input:focus, button:focus-visible { outline: 1px solid var(--amber); }
+  .tile:hover { border-color: var(--accent); background: var(--peach-soft); }
+  .tile .n { font-size: 44px; font-weight: 800; color: var(--accent); line-height: 1.1; }
+  .tile .t { font-size: 22px; font-weight: 800; margin-top: 6px; }
+  .tile .d { color: var(--dim); font-size: 15px; margin-top: 2px; }
+  .tile .d.err { color: var(--err); }
+  .panel-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+    color: var(--dim);
+    font-size: 15px;
+  }
 
-  .row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
-  button {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    color: var(--text);
-    padding: 8px 14px;
-    font: inherit;
+  .btn {
+    background: #fff;
+    color: var(--accent);
+    border: 1.5px solid var(--accent);
+    border-radius: 14px;
+    padding: 14px 26px;
+    font-weight: 700;
     cursor: pointer;
   }
-  button:hover { border-color: var(--amber); color: var(--amber); }
-  button:disabled { opacity: 0.4; cursor: default; }
-  button:disabled:hover { border-color: var(--line); color: var(--text); }
+  .btn:hover { background: var(--peach); }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .btn:disabled:hover { background: #fff; }
 
-  .status-line { color: var(--dim); font-size: 12px; margin-top: 10px; }
-  .status-line .on { color: var(--ok); }
-  .status-line .off { color: var(--err); }
-
-  .log {
-    border: 1px solid var(--line);
-    height: 320px;
-    overflow-y: auto;
-    padding: 10px 12px;
-    background: #100d09;
+  @media (max-width: 640px) {
+    .page { padding: 28px 18px 48px; }
+    h1 { font-size: 34px; }
   }
-  .entry { margin-bottom: 10px; white-space: pre-wrap; word-break: break-word; }
-  .entry .meta { color: var(--dim); font-size: 11px; }
-  .entry .ok { color: var(--ok); }
-  .entry .err { color: var(--err); }
-  .empty { color: var(--dim); }
+
+  /* ---------- popup window ---------- */
+  dialog {
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 0;
+    width: min(1280px, 97vw);
+    max-height: 95vh;
+    font: inherit;
+    box-shadow: 0 30px 80px rgba(59, 38, 22, 0.3);
+    overflow: hidden;
+  }
+  dialog[open] { display: flex; flex-direction: column; }
+  dialog::backdrop { background: rgba(59, 38, 22, 0.5); }
+
+  .dlg-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 24px 30px 18px;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+  }
+  .dlg-head .text { flex: 1; min-width: 0; }
+  .dlg-title { font-size: 32px; letter-spacing: -0.02em; margin: 0 0 4px; line-height: 1.1; }
+  .dlg-sub { color: var(--dim); font-size: 16px; margin: 0; }
+  .icon-btn {
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    font-size: 22px;
+    line-height: 1;
+    background: #fff;
+    border: 1.5px solid var(--line);
+    border-radius: 14px;
+    cursor: pointer;
+    color: var(--accent);
+  }
+  .icon-btn:hover { border-color: var(--accent); background: var(--peach-soft); }
+  .icon-btn:disabled { opacity: 0.5; cursor: default; }
+
+  .tabs { display: flex; gap: 10px; padding: 18px 30px 0; flex-wrap: wrap; }
+  .tab {
+    border: 1.5px solid var(--line);
+    background: #fff;
+    color: #6a5646;
+    padding: 10px 20px;
+    border-radius: 999px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .tab:hover { border-color: var(--accent); color: var(--accent); }
+  .tab.active { background: var(--peach); border-color: var(--peach); color: var(--accent); }
+
+  .dlg-body { padding: 22px 30px 28px; overflow-y: auto; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 22px; }
+  .dstat { border: 1px solid var(--line); background: #fff; border-radius: 18px; padding: 18px 20px; }
+  .dstat .n { font-size: 36px; font-weight: 800; line-height: 1.1; }
+  .dstat .l { color: var(--dim); font-size: 15px; margin-top: 4px; }
+  .c-accent { color: var(--accent); }
+  .c-green { color: var(--ok); }
+  .c-red { color: var(--err); }
+  .c-plain { color: var(--ink); }
+
+  .filters { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 14px; align-items: end; margin-bottom: 22px; }
+  .filters [hidden] { display: none; }
+  @media (max-width: 700px) { .filters { grid-template-columns: 1fr 1fr; } }
+  .filters label { display: block; color: var(--dim); font-size: 14px; font-weight: 600; margin: 0 0 6px; }
+  input, select {
+    width: 100%;
+    background: #fff;
+    border: 1.5px solid var(--line);
+    color: var(--ink);
+    padding: 12px 14px;
+    border-radius: 14px;
+    font: inherit;
+  }
+  input::placeholder { color: #b5a698; }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
+
+  .table-box {
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 18px;
+    overflow: auto;
+    max-height: 52vh;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    color: var(--dim);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    background: #fdf3e7;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+  }
+  td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+    word-break: break-word;
+    font-size: 17px;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover td { background: #fffaf4; }
+  td.long { max-width: 320px; }
+  td img { max-height: 72px; display: block; border-radius: 8px; }
+  .empty { padding: 56px 16px; text-align: center; color: var(--dim); font-size: 16px; }
+  .empty.err { color: var(--err); }
+
+  .foot { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; gap: 12px; flex-wrap: wrap; }
+  .foot .info { color: var(--dim); font-size: 15px; }
+  .foot .pager { display: flex; gap: 10px; }
+  .foot .pager .btn { padding: 10px 20px; font-size: 16px; }
 </style>
 </head>
 <body>
 
-  <p class="title">Admin console pn532</p>
-  <p class="subtitle">sends commands over HTTP to the backend, which relays them to the ESP32-S3 over WebSocket</p>
-
-  <!-- connection -->
-  <fieldset>
-    <legend>connection</legend>
-    <label for="backendUrl">backend url</label>
-    <input id="backendUrl" value="https://your-backend-host.onrender.com" placeholder="eg. https://my-app.onrender.com" />
-
-    <label for="deviceId">device id</label>
-    <input id="deviceId" value="esp32-01" placeholder="eg. esp32-01" />
-
-    <label for="apiKey">api key</label>
-    <input id="apiKey" type="password" autocomplete="off" placeholder="eg. secret_api_key_123" />
-
-    <div class="row">
-      <button id="refreshBtn">check devices online</button>
+  <main class="page">
+    <div class="page-head">
+      <div>
+        <p class="crumb">Smart Lending</p>
+        <h1>Lending console</h1>
+        <p class="lead">Pick a window to browse the database.</p>
+      </div>
+      <span class="pill" id="dbPill"><span class="dot"></span><span id="dbPillText">checking database…</span></span>
     </div>
-    <div class="status-line" id="statusLine">not checked yet</div>
-  </fieldset>
 
-  <!-- commands -->
-  <fieldset>
-    <legend>commands</legend>
-    <div class="row" style="margin-top:0">
-      <button data-cmd="ping">ping</button>
-      <button data-cmd="get_mac">get mac address</button>
-      <button data-cmd="read_tag">read tag</button>
+    <div class="panel">
+      <div class="tiles" id="cards"></div>
+      <div class="panel-foot">
+        <span id="loadedAt"></span>
+        <button class="btn" id="refreshAll">Refresh data</button>
+      </div>
     </div>
-    <div class="status-line" id="busyLine"></div>
-  </fieldset>
-  
-  <!-- database -->
-  <fieldset>
-    <legend>database (smart lending api)</legend>
-    <label for="lendUrl">lending api url</label>
-    <input id="lendUrl" value="https://rpi5.tailb8495f.ts.net" />
-  
-    <label for="lendPath">endpoint path</label>
-    <input id="lendPath" value="/loans" placeholder="eg. /loans" />
-  
-    <div class="row">
-      <button id="loadDbBtn">load data</button>
+  </main>
+
+  <!-- popup window -->
+  <dialog id="dlg" aria-labelledby="dlgTitle">
+    <div class="dlg-head">
+      <div class="text">
+        <p class="crumb" id="dlgCrumb"></p>
+        <h2 class="dlg-title" id="dlgTitle"></h2>
+        <p class="dlg-sub" id="dlgSub"></p>
+      </div>
+      <button class="icon-btn" id="reloadBtn" title="Reload from database" aria-label="Reload from database">↻</button>
+      <button class="icon-btn" id="closeBtn" title="Close" aria-label="Close">×</button>
     </div>
-    <div class="status-line" id="dbStatus"></div>
-    <div style="overflow-x:auto; margin-top:10px">
-      <table id="dbTable" style="width:100%; border-collapse:collapse"></table>
+
+    <div class="tabs" id="tabs"></div>
+
+    <div class="dlg-body">
+      <div class="stats" id="stats"></div>
+
+      <div class="filters">
+        <div>
+          <label for="fSearch">Search</label>
+          <input id="fSearch" placeholder="Search any column" autocomplete="off" />
+        </div>
+        <div id="fSelectWrap">
+          <label for="fSelect" id="fSelectLabel">Status</label>
+          <select id="fSelect"><option value="">All</option></select>
+        </div>
+        <div id="fFromWrap">
+          <label for="fFrom">From date</label>
+          <input id="fFrom" type="date" />
+        </div>
+        <div id="fToWrap">
+          <label for="fTo">To date</label>
+          <input id="fTo" type="date" />
+        </div>
+      </div>
+
+      <div class="table-box"><table id="tbl"></table></div>
+
+      <div class="foot">
+        <span class="info" id="info"></span>
+        <div class="pager">
+          <button class="btn" id="prevBtn"></button>
+          <button class="btn" id="nextBtn"></button>
+        </div>
+      </div>
     </div>
-  </fieldset>
-  
-  <!-- log -->
-  <fieldset>
-    <legend>log</legend>
-    <div class="log" id="log"><div class="empty">nothing sent yet</div></div>
-  </fieldset>
+  </dialog>
 
 <script>
   const $ = (id) => document.getElementById(id);
-  const logEl = $("log");
-  
-  async function loadDatabase() {
-    const status = $("dbStatus");
-    const table = $("dbTable");
-    const url = $("lendUrl").value.trim().replace(/\/$/, "") + $("lendPath").value.trim();
-  
-    status.textContent = "loading…";
-    table.textContent = "";
+  // Empty = the same server that served this page. For testing from another port use "http://localhost:3000".
+  const API_BASE = "";
+  const PAGE_SIZE = 10;
+  const HIDDEN_COLUMNS = ["password", "_open", "_overdue"]; // never shown, even if the API sends them
+
+  // ---------- one entry per window: edit here to change windows ----------
+  const count = (rows, fn) => rows.filter(fn).length;
+  const TABLES = {
+    loans: {
+      label: "Loans",
+      letter: "L",
+      subtitle: "Every loan, newest first",
+      blurb: "Who borrowed what, and when",
+      path: "loans",
+      dateField: "borrowed_at",
+      selectField: null,
+      newer: "← Newer", older: "Older →",
+      stats: (rows) => [
+        { n: rows.length, l: "Total loans", c: "c-accent" },
+        { n: count(rows, (r) => isToday(r.borrowed_at)), l: "Borrowed today", c: "c-green" },
+        { n: count(rows, (r) => withinDays(r.borrowed_at, 7)), l: "Last 7 days", c: "c-plain" },
+        { n: new Set(rows.map((r) => r.student_id)).size, l: "Different students", c: "c-plain" },
+      ],
+    },
+    students: {
+      label: "Students",
+      letter: "S",
+      subtitle: "All registered students",
+      blurb: "Registered borrowers and their status",
+      path: "students",
+      dateField: null,
+      selectField: "status", selectLabel: "Status",
+      newer: "← Previous", older: "Next →",
+      stats: (rows) => [
+        { n: rows.length, l: "Total students", c: "c-accent" },
+        { n: count(rows, (r) => r.status === "ACTIVE"), l: "Active", c: "c-green" },
+        { n: count(rows, (r) => r.status !== "ACTIVE"), l: "Not active", c: "c-red" },
+      ],
+    },
+    items: {
+      label: "Items",
+      letter: "I",
+      subtitle: "Item types in the catalog",
+      blurb: "Books, board games and equipment",
+      path: "items",
+      dateField: null,
+      selectField: "item_type", selectLabel: "Type",
+      newer: "← Previous", older: "Next →",
+      stats: (rows) => [
+        { n: rows.length, l: "Total loans", c: "c-accent" },
+        { n: count(rows, (r) => isToday(r.borrowed_at)), l: "Borrowed today", c: "c-green" },
+        { n: count(rows, (r) => r._open > 0), l: "Still out", c: "c-plain" },
+        { n: count(rows, (r) => r._overdue > 0), l: "Overdue", c: "c-red" },
+        { n: new Set(rows.map((r) => r.student_id)).size, l: "Different students", c: "c-plain" },
+      ],
+    },
+    "item-copies": {
+      label: "Item copies",
+      letter: "C",
+      subtitle: "Each physical copy and its status",
+      blurb: "Every copy on the shelf and where it is now",
+      path: "item-copies",
+      dateField: null,
+      selectField: "status", selectLabel: "Status",
+      newer: "← Previous", older: "Next →",
+      stats: (rows) => [
+        { n: rows.length, l: "Total copies", c: "c-accent" },
+        { n: count(rows, (r) => r.status === "AVAILABLE"), l: "Available", c: "c-green" },
+        { n: count(rows, (r) => r.status === "BORROWED"), l: "Borrowed", c: "c-red" },
+        { n: count(rows, (r) => r.status !== "AVAILABLE" && r.status !== "BORROWED"), l: "Other status", c: "c-plain" },
+      ],
+    },
+  };
+  const KEYS = Object.keys(TABLES);
+
+  // ---------- helpers ----------
+  function toDate(v) { const d = new Date(v); return isNaN(d) ? null : d; }
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function dayKey(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+  function isToday(v) { const d = toDate(v); return !!d && dayKey(d) === dayKey(new Date()); }
+  function withinDays(v, n) { const d = toDate(v); return !!d && Date.now() - d.getTime() <= n * 864e5; }
+  function fmtValue(col, v) {
+    if (v === null || v === undefined) return "";
+    if (/_at$/.test(col)) {
+      const d = toDate(v);
+      if (d) return `${dayKey(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    return typeof v === "object" ? JSON.stringify(v) : String(v);
+  }
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  // ---------- state ----------
+  const state = { key: "loans", cache: {}, errors: {}, loading: {}, page: 0, lastLoaded: null };
+
+  // ---------- data ----------
+  const fmtDT = (v) => {
+  const d = toDate(v);
+  return d ? `${dayKey(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}` : "";
+};
+
+// Adds item_copy_ids, due_at and return_status to every loan row
+  async function addItemIds(rows) {
+    return Promise.all(rows.map(async (r) => {
+      let items = null;
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/db/loans/${encodeURIComponent(r.loan_id)}/items`,
+          { credentials: "same-origin" }
+        );
+        if (res.ok) {
+          const d = await res.json();
+          items = Array.isArray(d) ? d : Array.isArray(d && d.items) ? d.items : [];
+        }
+      } catch (_) {}
+
+      const { photo_path, ...rest } = r;
+      let extra;
+      if (!items) {
+        extra = { item_copy_ids: "?", due_at: "", return_status: "?", _open: 0, _overdue: 0 };
+      } else {
+        const open = items.filter((i) => !i.returned_at);
+        const overdue = open.filter((i) => toDate(i.due_at) && toDate(i.due_at) < new Date());
+        const dues = items.map((i) => i.due_at).filter(Boolean).sort();
+        const lastReturn = items.map((i) => i.returned_at).filter(Boolean).sort().pop();
+
+        let status;
+        if (items.length === 0) status = "No items";
+        else if (open.length === 0) status = `Returned ${fmtDT(lastReturn)}`;
+        else if (open.length === items.length) status = "Not returned";
+        else status = `${items.length - open.length} of ${items.length} returned`;
+        if (overdue.length) status += " (overdue)";
+
+        extra = {
+          item_copy_ids: items.map((i) => i.item_copy_id).filter(Boolean).join(", "),
+          due_at: dues[0] || "",
+          return_status: status,
+          _open: open.length,
+          _overdue: overdue.length,
+        };
+      }
+      return { ...rest, ...extra, ...("photo_path" in r ? { photo_path } : {}) };
+    }));
+  }
+
+  async function fetchTable(key) {
+    state.loading[key] = true;
+    state.errors[key] = null;
+    renderAll();
     try {
-      const res = await fetch(url, { headers: apiHeaders() });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      let rows = await res.json();
-      if (!Array.isArray(rows)) rows = rows.items || rows.data || [rows]; // handle wrapped responses
-      if (rows.length === 0) { status.textContent = "no rows"; return; }
-  
-      const cols = Object.keys(rows[0]);
-      const head = table.createTHead().insertRow();
-      cols.forEach((c) => {
-        const th = document.createElement("th");
-        th.textContent = c;
-        th.style.cssText = "text-align:left; color:var(--amber); border-bottom:1px solid var(--line); padding:6px";
-        head.append(th);
-      });
-      const body = table.createTBody();
-      rows.forEach((r) => {
+      const res = await fetch(`${API_BASE}/api/db/${TABLES[key].path}`, { credentials: "same-origin" });
+      let data = null;
+      try { data = await res.json(); } catch (_) {}
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("not logged in - reload the page and sign in");
+        const detail = data && data.cause ? ` (${data.cause})` : "";
+        throw new Error(((data && (data.error || data.detail)) || `HTTP ${res.status}`) + detail);
+      }
+      let rows = Array.isArray(data) ? data : [data];
+    if (key === "loans") rows = await addItemIds(rows);
+      state.cache[key] = rows;
+    } catch (e) {
+      state.errors[key] = e.message;
+      delete state.cache[key];
+    } finally {
+      state.loading[key] = false;
+      if (key === state.key) resetFilters();
+      renderAll();
+    }
+  }
+
+  function loadAll() {
+    $("refreshAll").disabled = true;
+    return Promise.all(KEYS.map(fetchTable)).finally(() => {
+      $("refreshAll").disabled = false;
+      state.lastLoaded = new Date();
+      renderHome();
+    });
+  }
+
+  function resetFilters() {
+    $("fSearch").value = "";
+    $("fFrom").value = "";
+    $("fTo").value = "";
+    state.page = 0;
+  }
+
+  function openWindow(key) {
+    state.key = key;
+    state.page = 0;
+    resetFilters();
+    if (!$("dlg").open) $("dlg").showModal();
+    if (state.cache[key] || state.loading[key]) renderAll(); else fetchTable(key);
+  }
+
+  // ---------- filtering ----------
+  function visibleColumns(rows) {
+    return rows.length ? Object.keys(rows[0]).filter((c) => !HIDDEN_COLUMNS.includes(c)) : [];
+  }
+
+  function filteredRows() {
+    const def = TABLES[state.key];
+    const rows = state.cache[state.key] || [];
+    const cols = visibleColumns(rows);
+    const q = $("fSearch").value.trim().toLowerCase();
+    const sel = $("fSelect").value;
+    const from = $("fFrom").value;
+    const to = $("fTo").value;
+
+    return rows.filter((r) => {
+      if (q && !cols.some((c) => fmtValue(c, r[c]).toLowerCase().includes(q))) return false;
+      if (def.selectField && sel && r[def.selectField] !== sel) return false;
+      if (def.dateField && (from || to)) {
+        const d = toDate(r[def.dateField]);
+        if (!d) return false;
+        const k = dayKey(d);
+        if (from && k < from) return false;
+        if (to && k > to) return false;
+      }
+      return true;
+    });
+  }
+
+  // ---------- rendering: home page ----------
+  function renderHome() {
+    const cards = $("cards");
+    cards.textContent = "";
+    KEYS.forEach((key) => {
+      const def = TABLES[key];
+      const err = state.errors[key];
+      const tile = el("button", "tile");
+      tile.type = "button";
+      const n = state.loading[key] ? "…" : state.cache[key] ? String(state.cache[key].length) : "–";
+      tile.append(
+        el("div", "n", n),
+        el("div", "t", def.label),
+        el("div", "d" + (err ? " err" : ""), err ? `failed: ${err}` : def.blurb)
+      );
+      tile.addEventListener("click", () => openWindow(key));
+      cards.append(tile);
+    });
+
+    $("loadedAt").textContent = state.lastLoaded
+      ? `Last refreshed ${state.lastLoaded.toLocaleTimeString()}`
+      : "";
+
+    const anyLoading = KEYS.some((k) => state.loading[k]);
+    const failed = KEYS.filter((k) => state.errors[k]).length;
+    const pill = $("dbPill");
+    pill.className = "pill";
+    if (anyLoading) $("dbPillText").textContent = "loading data…";
+    else if (failed === KEYS.length) { pill.classList.add("bad"); $("dbPillText").textContent = "database offline"; }
+    else if (failed > 0) { pill.classList.add("bad"); $("dbPillText").textContent = "some data failed to load"; }
+    else { pill.classList.add("ok"); $("dbPillText").textContent = "database online"; }
+  }
+
+  // ---------- rendering: popup ----------
+  function renderTabs() {
+    const box = $("tabs");
+    box.textContent = "";
+    KEYS.forEach((key) => {
+      const b = el("button", "tab" + (key === state.key ? " active" : ""), TABLES[key].label);
+      b.type = "button";
+      b.addEventListener("click", () => openWindow(key));
+      box.append(b);
+    });
+  }
+
+  function renderStats(rows, def) {
+    const box = $("stats");
+    box.textContent = "";
+    if (!rows) return;
+    def.stats(rows).forEach((s) => {
+      const d = el("div", "dstat");
+      d.append(el("div", "n " + s.c, String(s.n)), el("div", "l", s.l));
+      box.append(d);
+    });
+  }
+
+  function renderSelect(rows, def) {
+    $("fSelectWrap").hidden = !def.selectField;
+    $("fFromWrap").hidden = !def.dateField;
+    $("fToWrap").hidden = !def.dateField;
+    if (!def.selectField) return;
+
+    const current = $("fSelect").value;
+    $("fSelectLabel").textContent = def.selectLabel;
+    const values = [...new Set((rows || []).map((r) => r[def.selectField]).filter(Boolean))].sort();
+    const sel = $("fSelect");
+    sel.textContent = "";
+    const all = el("option", "", "All");
+    all.value = "";
+    sel.append(all);
+    values.forEach((v) => {
+      const o = el("option", "", v);
+      o.value = v;
+      sel.append(o);
+    });
+    sel.value = values.includes(current) ? current : "";
+  }
+
+  function emptyRow(text, cls) {
+    const t = $("tbl");
+    t.textContent = "";
+    const td = t.insertRow().insertCell();
+    td.className = "empty" + (cls ? " " + cls : "");
+    td.textContent = text;
+  }
+
+  function setPager(page, pages) {
+    $("prevBtn").disabled = page <= 0;
+    $("nextBtn").disabled = page >= pages - 1;
+  }
+
+  function renderDialog() {
+    const key = state.key;
+    const def = TABLES[key];
+    const rows = state.cache[key];
+
+    $("dlgCrumb").textContent = `Smart Lending / ${def.label}`;
+    $("dlgTitle").textContent = def.label;
+    $("dlgSub").textContent = def.subtitle;
+    $("prevBtn").textContent = def.newer;
+    $("nextBtn").textContent = def.older;
+    $("reloadBtn").disabled = !!state.loading[key];
+    renderTabs();
+    renderStats(rows, def);
+    renderSelect(rows, def);
+
+    if (state.loading[key]) { emptyRow("Loading…"); $("info").textContent = ""; setPager(0, 0); return; }
+    if (state.errors[key]) { emptyRow(`Failed: ${state.errors[key]}`, "err"); $("info").textContent = ""; setPager(0, 0); return; }
+    if (!rows) { emptyRow("Not loaded yet"); $("info").textContent = ""; setPager(0, 0); return; }
+
+    const list = filteredRows();
+    const pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+    if (state.page >= pages) state.page = pages - 1;
+    const start = state.page * PAGE_SIZE;
+    const slice = list.slice(start, start + PAGE_SIZE);
+
+    if (rows.length === 0) emptyRow("No rows in this table yet");
+    else if (list.length === 0) emptyRow("No rows match these filters");
+    else {
+      const cols = visibleColumns(rows);
+      const t = $("tbl");
+      t.textContent = "";
+      const head = t.createTHead().insertRow();
+      cols.forEach((c) => head.append(el("th", "", c.replace(/_/g, " "))));
+      const body = t.createTBody();
+      slice.forEach((r) => {
         const tr = body.insertRow();
         cols.forEach((c) => {
           const td = tr.insertCell();
-          td.textContent = r[c] ?? "";   // textContent, never innerHTML
-          td.style.cssText = "border-bottom:1px solid var(--line); padding:6px";
+          const raw = r[c];
+          if (typeof raw === "string" && /^data:image\/(jpeg|png|gif|webp);base64,/.test(raw)) {
+            const img = el("img");
+            img.alt = "photo";
+            img.src = raw;
+            td.append(img);
+          } else {
+            const text = fmtValue(c, raw);
+            td.textContent = text;
+            if (text.length > 60) td.classList.add("long");
+          }
         });
       });
-      status.textContent = `${rows.length} rows loaded`;
-    } catch (e) {
-      status.textContent = `failed: ${e.message}`;
     }
-  }
-  $("loadDbBtn").addEventListener("click", loadDatabase);
-  
-  // ---- remember connection fields between visits ----
-  function loadSaved() {
-    try {
-      for (const k of ["backendUrl", "deviceId", "apiKey"]) {
-        const v = localStorage.getItem("pn532." + k);
-        if (v) $(k).value = v;
-      }
-    } catch (_) {}
-  }
-  function saveField(k) {
-    try { localStorage.setItem("pn532." + k, $(k).value); } catch (_) {}
+
+    const from = list.length ? start + 1 : 0;
+    $("info").textContent = `Showing ${from}–${start + slice.length} of ${list.length} rows` +
+      (list.length !== rows.length ? ` (filtered from ${rows.length})` : "");
+    setPager(state.page, pages);
   }
 
-  function baseUrl() { return $("backendUrl").value.trim().replace(/\/$/, ""); }
-  function apiHeaders(extra) {
-    return { "x-api-key": $("apiKey").value.trim(), ...extra };
-  }
-  function timestamp() { return new Date().toLocaleTimeString(); }
-
-  // ---- log (textContent only: device replies are untrusted) ----
-  function logEntry(meta, body, cls) {
-    if (logEl.querySelector(".empty")) logEl.textContent = "";
-    const div = document.createElement("div");
-    div.className = "entry";
-    const m = document.createElement("div");
-    m.className = "meta";
-    m.textContent = meta;
-    const b = document.createElement("div");
-    b.className = cls;
-    b.textContent = body;
-    div.append(m, b);
-    logEl.prepend(div);
+  function renderAll() {
+    renderHome();
+    if ($("dlg").open) renderDialog();
   }
 
-  function setBusy(on) {
-    document.querySelectorAll("button").forEach((b) => (b.disabled = on));
-    $("busyLine").textContent = on
-      ? "working… if the command needs a tag, hold it on the reader now"
-      : "";
-  }
+  // ---------- wiring ----------
+  $("refreshAll").addEventListener("click", loadAll);
+  $("closeBtn").addEventListener("click", () => $("dlg").close());
+  $("dlg").addEventListener("click", (e) => { if (e.target === $("dlg")) $("dlg").close(); });
+  $("reloadBtn").addEventListener("click", () => fetchTable(state.key));
 
-  // ---- backend calls ----
-  async function checkDevices() {
-    const line = $("statusLine");
-    line.textContent = "checking…";
-    try {
-      const res = await fetch(`${baseUrl()}/api/devices`, { headers: apiHeaders() });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      const list = data.devices || [];
-      const wanted = $("deviceId").value.trim();
-      const online = list.includes(wanted);
-      line.textContent = `online devices: [${list.join(", ") || "none"}] — target "${wanted}" is `;
-      const state = document.createElement("span");
-      state.className = online ? "on" : "off";
-      state.textContent = online ? "online" : "offline";
-      line.append(state);
-    } catch (e) {
-      line.textContent = "";
-      const state = document.createElement("span");
-      state.className = "off";
-      state.textContent = `could not reach backend: ${e.message}`;
-      line.append(state);
-    }
-  }
+  ["fSearch", "fSelect", "fFrom", "fTo"].forEach((id) =>
+    $(id).addEventListener("input", () => { state.page = 0; renderDialog(); }));
 
-  async function sendCommand(command, params = {}) {
-    const deviceId = $("deviceId").value.trim();
-    const meta = `${timestamp()} — ${command} → ${deviceId}`;
+  $("prevBtn").addEventListener("click", () => { state.page--; renderDialog(); });
+  $("nextBtn").addEventListener("click", () => { state.page++; renderDialog(); });
 
-    setBusy(true);
-    try {
-      const res = await fetch(`${baseUrl()}/api/command`, {
-        method: "POST",
-        headers: apiHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ deviceId, command, params }),
-      });
-      const data = await res.json();
-      const ok = res.ok && data.status === "ok";
-      logEntry(meta, JSON.stringify(data), ok ? "ok" : "err");
-    } catch (e) {
-      logEntry(meta, `request failed: ${e.message}`, "err");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // ---- wiring ----
-  $("refreshBtn").addEventListener("click", checkDevices);
-  $("backendUrl").addEventListener("input", () => saveField("backendUrl"));
-  $("deviceId").addEventListener("input", () => saveField("deviceId"));
-  $("apiKey").addEventListener("input", () => saveField("apiKey"));
-
-  document.querySelectorAll("button[data-cmd]").forEach((btn) => {
-    btn.addEventListener("click", () => sendCommand(btn.dataset.cmd));
-  });
-
-  loadSaved();
+  renderAll();
+  loadAll();
 </script>
 </body>
 </html>
